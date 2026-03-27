@@ -29,5 +29,6 @@ Ok while this is all there is for these papers here are some type of ideas I hav
 1. Using BERT or GLoVE Embeddings and clustering them to use group sparsity.
 2. Building weighted sparse graphs and embedding them into $\mathbb{R}^p$ metric space, clustering them and imposing group sparsity
 3. Finding Sparse Cuts in the label graphs and imposing group sparsity
+4. Using small number of AND Classifiers in addition to OR Classifiers
 
 Feel free to critique these last few ideas and add to them, if theres anything unclear do approach me. 
