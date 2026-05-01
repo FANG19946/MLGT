@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.sparse import csr_matrix
 from bitarray import bitarray
+import torch
 
 
 def build_testing_matrix(
@@ -99,4 +100,37 @@ def dataset_params(trainset, e_ratio):
     e=max(1, int(e_ratio * mean_frequency))
 
     return n_labels,n_tests,k,e
+
+def train_classifiers(dataset, A, epochs, lr=0.001, device='cuda'):
+    feature_matrix, label_matrix = dataset
+    feature_matrix = torch.tensor(feature_matrix, dtype=torch.float32, device=device)
+    label_matrix = torch.tensor(label_matrix, dtype=torch.float32, device=device)
+    A = torch.tensor(A, dtype=torch.bool, device=device)
+
+    n_samples, d = feature_matrix.shape
+    n_labels = label_matrix.shape[1]
+    n_tests = A.shape[0]
+
+    Y_test = torch.zeros((n_samples, n_tests), device=device)
+
+    for i in range(n_tests):
+        label_mask = A[i]  
+        Y_test[:, i] = torch.any(label_matrix[:, label_mask], dim=1)
+
+    
+    W = torch.randn(n_tests, d, device=device, requires_grad=True)
+    optimizer = torch.optim.Adam([W], lr=lr)
+    loss_fn = torch.nn.BCEWithLogitsLoss()
+
+    for _ in range(epochs):
+
+        logits = feature_matrix @ W.T   # (n_samples, n_tests)
+
+        loss = loss_fn(logits, Y_test)
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+    return W.detach()
 
