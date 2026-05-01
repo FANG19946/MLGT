@@ -87,3 +87,16 @@ def decoder(A, y, e):
     y = np.array(y, dtype=bool)
     z = A.T @ y
     return z
+
+def dataset_params(trainset, e_ratio):
+    trainset = np.array(trainset,dtype=bool)
+    n_tests, n_labels = trainset.shape
+
+    label_sparsity = trainset.sum(axis=1)
+    label_frequency = trainset.sum(axis=0)
+    mean_frequency = np.mean(label_frequency)
+    k=int(np.median(label_sparsity))
+    e=max(1, int(e_ratio * mean_frequency))
+
+    return n_labels,n_tests,k,e
+
