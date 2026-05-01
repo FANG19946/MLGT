@@ -83,10 +83,28 @@ def build_testing_matrix(
     return A
 
 
+
+
 def decoder(A, y, e):
     A = np.array([row.tolist() for row in A], dtype=bool)
     y = np.array(y, dtype=bool)
-    z = A.T @ y
+    
+    
+    n_tests, n_labels = A.shape
+
+    z = np.zeros(n_labels, dtype=int)
+
+    supp_y = set(np.where(y)[0])          
+    for i in range(n_labels):
+
+        supp_A_i = set(np.where(A[:, i])[0])   
+
+        missing = supp_A_i - supp_y           
+
+        if len(missing) < e // 2:
+            z[i] = 1
+        else:
+            z[i] = 0
     return z
 
 def dataset_params(trainset, e_ratio):
@@ -133,4 +151,54 @@ def train_classifiers(dataset, A, epochs, lr=0.001, device='cuda'):
         optimizer.step()
 
     return W.detach()
+
+def evaluation_metrics(W, dataset, A, k,e, device='cuda'):
+    feature_matrix, label_matrix = dataset
+
+    feature_matrix = torch.tensor(feature_matrix, dtype=torch.float32, device=device)
+    label_matrix = torch.tensor(label_matrix, dtype=torch.int32, device=device)
+    A = torch.tensor(A, dtype=torch.bool, device=device)
+
+    n_samples = feature_matrix.shape[0]
+    n_tests = A.shape[0]
+    n_labels = A.shape[1]
+
+
+    logits = feature_matrix @ W.T
+    result = torch.sigmoid(logits)
+    result = (result > 0.5)
+
+    result=result.cpu().numpy().astype(bool)
+    A = A.cpu().numpy().astype(bool)
+    label_matrix = label_matrix.cpu().numpy()
+
+    full_result = decoder(A,result,e)
+
+    true_result = label_matrix
+    # Hamming loss
+    hamming_loss = np.mean(true_result != full_result)
+
+
+    logits_np = logits.detach().cpu().numpy()
+    
+
+    precision_scores = []
+
+    for i in range(n_samples):
+
+        
+        top_k = np.argsort(-logits_np[i])[:k]
+
+        
+        true_labels = np.where(true_result[i] == 1)[0]
+
+        if len(true_labels) == 0:
+            continue
+
+        hits = len(set(top_k) & set(true_labels))
+
+        precision_scores.append(hits / k)
+
+    precision_at_k = np.mean(precision_scores)
+
 
