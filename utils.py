@@ -80,3 +80,10 @@ def build_testing_matrix(
 
     
     return A
+
+
+def decoder(A, y, e):
+    A = np.array([row.tolist() for row in A], dtype=bool)
+    y = np.array(y, dtype=bool)
+    z = A.T @ y
+    return z
