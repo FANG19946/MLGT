@@ -9,7 +9,8 @@ def build_testing_matrix(
         n_tests,n_labels,
         k,e=0,
         method='bernoulli',
-        seed=None
+        seed=None , 
+        Y_train = None 
         ):
     match method:
         case 'bernoulli':
@@ -71,6 +72,16 @@ def build_testing_matrix(
         case 'identity':
             n_tests = n_labels
             A = np.eye(n_labels, dtype=bool)
+        
+        case 'nmf':
+            if Y_train is None:
+                raise ValueError("NMF requires Y_train to calculate correlations")
+            
+            m = int(10 * k * np.log(n_labels + 1)) 
+            c_weight = max(2, int(np.log(n_labels)))
+            
+            A = symNMF(Y_train, m, c_weight, seed=seed)
+            e = c_weight // 2
 
            
             
