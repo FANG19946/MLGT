@@ -77,7 +77,7 @@ def run_experiment(dataset_name='mediamill'):
     print(f"\nDataset stats:")
     print(f"n_labels = {n_labels}, n_tests = {n_tests}, k = {k}, e = {e}")
 
-    methods = ['identity', 'bernoulli', 'expander', 'rs']
+    methods = ['identity', 'bernoulli', 'expander', 'rs' , 'nmf']
 
     results = {}
 
