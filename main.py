@@ -8,7 +8,11 @@ from utils import (
     build_testing_matrix,
     dataset_params,
     train_classifiers,
-    evaluation_metrics
+    train_classifiers2,
+
+    evaluation_metrics,
+    evaluation_metrics2
+
 )
 
 
@@ -112,8 +116,11 @@ def run_experiment(dataset_name='mediamill'):
     # ----------------------------
     # methods
     # ----------------------------
-    methods = ['identity', 'bernoulli', 'expander', 'rs']
-    threshold=[0.9,  0.015,  0.05,  0.2]
+    # methods = ['identity', 'bernoulli', 'expander', 'rs']
+    methods = ['bernoulli']
+    threshold=[0.015]
+
+    # threshold=[0.9,  0.015,  0.05,  0.2]
 
     results = {}
 
@@ -132,7 +139,7 @@ def run_experiment(dataset_name='mediamill'):
             seed=42
         )
 
-        W = train_classifiers(
+        W = train_classifiers2(
             dataset=(X_train, Y_train),
             A=A,
             epochs=30,
@@ -150,11 +157,11 @@ def run_experiment(dataset_name='mediamill'):
         #     device='cuda'
         # )
 
-        metrics = evaluation_metrics(
-            W=W,
+        metrics = evaluation_metrics2(
+            models=W,
             dataset=(X_test, Y_test),
             A=A,
-            k=k,
+            k=4,
             e=e,
             threshold=threshold[i],
             device='cuda'
@@ -169,8 +176,8 @@ def run_experiment(dataset_name='mediamill'):
     # ----------------------------
     print("\n===== FINAL RESULTS =====")
     for method, metrics in results.items():
-        print(f"{method}: HL={metrics['hamming_loss']:.4f}, P@{k}={metrics['precision@k']:.4f}, n_labels={metrics['n_labels']}, n_tests={metrics['n_tests']}, Avg predicted labels per sample={metrics['avg_pred']}")
-
+        # print(f"{method}: HL={metrics['hamming_loss']:.4f}, P@{k}={metrics['precision@k']:.4f}, n_labels={metrics['n_labels']}, n_tests={metrics['n_tests']}, Avg predicted labels per sample={metrics['avg_pred']}")
+        print(f"{method}: HL={metrics['hamming_loss']:.4f}, P@{k}={metrics['precision@k']:.4f}")
 
 # ----------------------------
 # RUN

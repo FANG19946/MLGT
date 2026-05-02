@@ -2,5 +2,10 @@ Mediamill
 FINAL RESULTS 
 identity: HL=0.6000, P@4=0.0060, n_labels=101, n_tests=101
 bernoulli: HL=0.1782, P@4=0.0426, n_labels=101, n_tests=73
+bernoulli: HL=0.2030, P@4=0.1021, n_labels=101, n_tests=73
+bernoulli: HL=0.4433, P@4=0.0304, n_labels=101, n_tests=73,
+bernoulli: HL=0.1932, P@4=0.0790, n_labels=101, n_tests=73,
 expander: HL=0.0560, P@4=0.1158, n_labels=101, n_tests=73
+expander: HL=0.0784, P@4=0.1786, n_labels=101, n_tests=73
 rs: HL=0.0436, P@4=0.0430, n_labels=101, n_tests=32
+SymNMF: HL: 0.2038, P@4: 0.0731, n_labels=101, n_tests=32

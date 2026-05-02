@@ -66,6 +66,7 @@ def build_testing_matrix(
                     load[i] += 1
 
             e = ell // 4
+            
 
         case 'identity':
             n_tests = n_labels
@@ -76,16 +77,37 @@ def build_testing_matrix(
             
 
     n_tests = A.shape[0]
-    A_bit = []
-    for i in range(A.shape[0]):
-        ba = bitarray()
-        ba.extend(A[i].tolist())   
-        A_bit.append(ba)
+    # A_bit = []
+    # for i in range(A.shape[0]):
+    #     ba = bitarray()
+    #     ba.extend(A[i].tolist())   
+    #     A_bit.append(ba)
 
-    A = A_bit
+    # A = A_bit
 
     
     return A,n_tests,e
+
+def debug_matrix(A, name="matrix"):
+    import numpy as np
+
+    A = np.array([list(row) for row in A], dtype=bool)
+
+    row_sum = A.sum(axis=1)
+    col_sum = A.sum(axis=0)
+
+    empty_rows = np.sum(row_sum == 0)
+    empty_cols = np.sum(col_sum == 0)
+
+    print(f"\n--- {name} DEBUG ---")
+    print("Shape:", A.shape)
+    print("Empty rows:", empty_rows)
+    print("Empty cols:", empty_cols)
+    print("Avg row degree:", row_sum.mean())
+    print("Max row degree:", row_sum.max())
+    print("Min row degree:", row_sum.min())
+
+    return empty_rows, empty_cols
 
 def decoder(A, y, e):
     A = np.array([row.tolist() for row in A], dtype=bool)
@@ -125,6 +147,44 @@ def dataset_params(trainset, e_ratio):
 
     return n_labels,n_tests,k,None
 
+def train_classifiers2(dataset, A, epochs, lr=1e-3, device='cuda'):
+    X, Y = dataset
+
+    if hasattr(X, "toarray"):
+        X = X.toarray()
+    if hasattr(Y, "toarray"):
+        Y = Y.toarray()
+
+    X = torch.tensor(X, dtype=torch.float32, device=device)
+    Y = torch.tensor(Y, dtype=torch.float32, device=device)
+
+    n_samples, d = X.shape
+    n_tests = len(A)
+
+    models = []
+
+    for j in range(n_tests):
+
+        model = torch.nn.Linear(d, 1).to(device)
+        opt = torch.optim.Adam(model.parameters(), lr=lr)
+        loss_fn = torch.nn.BCEWithLogitsLoss()
+
+        # build label for classifier j
+        Aj = A[j]
+        Yj = (Y[:, Aj].sum(dim=1) > 0).float()
+
+        for _ in range(epochs):
+            logits = model(X).squeeze()
+            loss = loss_fn(logits, Yj)
+
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
+
+        models.append(model)
+
+    return models
+
 def train_classifiers(dataset, A, epochs, lr=0.001, device='cuda'):
     feature_matrix, label_matrix = dataset
     
@@ -162,7 +222,8 @@ def train_classifiers(dataset, A, epochs, lr=0.001, device='cuda'):
     pos_weight = torch.clamp(pos_weight, min=1.0, max=10.0).to(device)
 
     pos_weight = pos_weight.to(device)
-    loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+    # loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+    loss_fn = torch.nn.BCEWithLogitsLoss()
     
     for _ in range(epochs):
 
@@ -264,3 +325,55 @@ def evaluation_metrics(W, dataset, A, k,e,threshold=0.1, device='cuda'):
     }
 
 
+def evaluation_metrics2(models, dataset, A, k, e, threshold=0.1, device='cuda'):
+    X, Y = dataset
+
+    if hasattr(X, "toarray"):
+        X = X.toarray()
+    if hasattr(Y, "toarray"):
+        Y = Y.toarray()
+
+    X = torch.tensor(X, dtype=torch.float32, device=device)
+
+    n_samples = X.shape[0]
+    n_tests = len(models)
+
+    probs = np.zeros((n_samples, n_tests))
+
+    # forward pass per classifier
+    for j, model in enumerate(models):
+        with torch.no_grad():
+            logits = model(X).squeeze()
+            probs[:, j] = torch.sigmoid(logits).cpu().numpy()
+
+    A = np.array(A, dtype=bool)
+    Y = np.array(Y, dtype=int)
+
+    full_result = np.zeros((n_samples, A.shape[1]), dtype=int)
+
+    for i in range(n_samples):
+        z = probs[i]
+
+        scores = A.T @ z
+        top_k = np.argsort(-scores)[:k]
+
+        full_result[i, top_k] = 1
+
+    hamming_loss = np.mean(full_result != Y)
+
+    precision_scores = []
+
+    for i in range(n_samples):
+        true_labels = np.where(Y[i] == 1)[0]
+        if len(true_labels) == 0:
+            continue
+
+        pred = np.argsort(-scores)[:k]
+        hits = len(set(pred) & set(true_labels))
+
+        precision_scores.append(hits / k)
+
+    return {
+        "hamming_loss": hamming_loss,
+        "precision@k": np.mean(precision_scores) if precision_scores else 0.0
+    }
