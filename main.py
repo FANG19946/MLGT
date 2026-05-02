@@ -118,7 +118,7 @@ def run_experiment(dataset_name='mediamill'):
     # ----------------------------
     # methods = ['identity', 'bernoulli', 'expander', 'rs']
     methods = ['bernoulli']
-    threshold=[0.015]
+    threshold=[0.00015]
 
     # threshold=[0.9,  0.015,  0.05,  0.2]
 
@@ -139,7 +139,7 @@ def run_experiment(dataset_name='mediamill'):
             seed=42
         )
 
-        W = train_classifiers2(
+        W = train_classifiers(
             dataset=(X_train, Y_train),
             A=A,
             epochs=30,
@@ -157,8 +157,8 @@ def run_experiment(dataset_name='mediamill'):
         #     device='cuda'
         # )
 
-        metrics = evaluation_metrics2(
-            models=W,
+        metrics = evaluation_metrics(
+            W=W,
             dataset=(X_test, Y_test),
             A=A,
             k=4,
@@ -183,4 +183,4 @@ def run_experiment(dataset_name='mediamill'):
 # RUN
 # ----------------------------
 if __name__ == "__main__":
-    run_experiment('mediamill')
+    run_experiment('bibtex')

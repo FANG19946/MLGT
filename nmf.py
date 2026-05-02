@@ -9,8 +9,8 @@ from skmultilearn.dataset import load_from_arff
 # DATA
 # =========================================================
 def load_data():
-    train_path = "datasets/mediamill/mediamill-train.arff"
-    test_path = "datasets/mediamill/mediamill-test.arff"
+    train_path = "datasets/bibtex/bibtex-train.arff"
+    test_path = "datasets/bibtex/bibtex-test.arff"
 
     X_train_full, Y_train_full = load_from_arff(
         train_path,
@@ -205,13 +205,13 @@ def run():
     X_train, Y_train, X_val, Y_val, X_test, Y_test = load_data()
 
     k = max(1, int(Y_train.sum(axis=1).mean()))
-    m = 73
+    m = 100
 
     print("\nBuilding SymNMF...")
     H = symnmf(Y_train, m)
 
     print("Building A...")
-    A = build_A(H, c=2)
+    A = build_A(H, c=4)
 
     print("\n--- LABEL ASSIGNMENT MATRIX (A) DEBUG ---")
     # =====================================================
