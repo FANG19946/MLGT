@@ -5,13 +5,11 @@ import torch.optim as optim
 from skmultilearn.dataset import load_from_arff
 from sklearn.model_selection import train_test_split
 from scipy.sparse import issparse
-
-# =========================================================
-# DATA
-# =========================================================
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.model_selection import train_test_split
 import numpy as np
+
+
 def parse_libsvm_multilabel(path, max_feat=5000):
     X_list = []
     Y_list = []
@@ -24,14 +22,12 @@ def parse_libsvm_multilabel(path, max_feat=5000):
 
             parts = line.split()
 
-            # -------------------------
-            # LABEL PARSING (FIRST TOKEN)
-            # -------------------------
+            
             raw_labels = parts[0].split(",")
 
             labels = []
             for x in raw_labels:
-                # safety: skip corrupted tokens like "0:0.08"
+                
                 if ":" in x:
                     continue
                 try:
@@ -41,9 +37,7 @@ def parse_libsvm_multilabel(path, max_feat=5000):
 
             Y_list.append(labels)
 
-            # -------------------------
-            # FEATURE PARSING
-            # -------------------------
+          
             x = np.zeros(max_feat, dtype=np.float32)
 
             for item in parts[1:]:
@@ -92,16 +86,16 @@ def load_eurlex():
     Xva, Yva = fix(X_val, Y_val)
     Xte, Yte = fix(X_test, Y_test)
 
-    print("\n[EURLEX FIXED LOADER]")
-    print("X_train:", Xtr.shape)
-    print("X_val:", Xva.shape)
-    print("X_test:", Xte.shape)
-    print("Y_train:", Ytr.shape)
-    print("Y_val:", Yva.shape)
-    print("Y_test:", Yte.shape)
+    # print("\n[EURLEX FIXED LOADER]")
+    # print("X_train:", Xtr.shape)
+    # print("X_val:", Xva.shape)
+    # print("X_test:", Xte.shape)
+    # print("Y_train:", Ytr.shape)
+    # print("Y_val:", Yva.shape)
+    # print("Y_test:", Yte.shape)
 
-    print("n_labels:", Ytr.shape[1])
-    print("avg labels/sample:", Ytr.sum(axis=1).mean())
+    # print("n_labels:", Ytr.shape[1])
+    # print("avg labels/sample:", Ytr.sum(axis=1).mean())
 
     return Xtr, Ytr, Xte, Yte
 
@@ -159,9 +153,7 @@ def load_mediamill():
     return X_train, Y_train, X_test, Y_test
 
 
-# =========================================================
-# SAFE CONVERSION
-# =========================================================
+
 
 def to_dense(X):
     if issparse(X):
@@ -169,9 +161,7 @@ def to_dense(X):
     return np.array(X)
 
 
-# =========================================================
-# SYMNMF (simple multiplicative updates)
-# =========================================================
+
 
 def symnmf(S, r=10, steps=200, lr=0.01):
     n = S.shape[0]
@@ -188,18 +178,14 @@ def symnmf(S, r=10, steps=200, lr=0.01):
     return H
 
 
-# =========================================================
-# BUILD LABEL GRAPH
-# =========================================================
+
 
 def build_S(Y):
     Y = to_dense(Y).astype(float)
     return Y.T @ Y
 
 
-# =========================================================
-# CLUSTER LABELS
-# =========================================================
+
 
 def cluster_labels(H):
     return np.argmax(H, axis=1)
@@ -216,10 +202,6 @@ def build_groups(H):
     return groups
 
 
-# =========================================================
-# MODEL (one per group)
-# =========================================================
-
 class GroupClassifier(nn.Module):
     def __init__(self, d):
         super().__init__()
@@ -229,9 +211,7 @@ class GroupClassifier(nn.Module):
         return self.net(x).squeeze(-1)
 
 
-# =========================================================
-# TRAIN GROUP MODELS
-# =========================================================
+
 
 def train_group_models(X, Y, groups, epochs=20, lr=1e-3):
     X = torch.tensor(to_dense(X), dtype=torch.float32)
@@ -266,9 +246,7 @@ def train_group_models(X, Y, groups, epochs=20, lr=1e-3):
     return models
 
 
-# =========================================================
-# PREDICT
-# =========================================================
+
 
 def predict(models, X):
     X = torch.tensor(to_dense(X), dtype=torch.float32)
@@ -285,9 +263,6 @@ def predict(models, X):
     return np.stack(outs, axis=1)
 
 
-# =========================================================
-# DECODE
-# =========================================================
 
 def decode(groups, scores, k):
     label_scores = np.zeros(scores.shape[0])
@@ -298,9 +273,6 @@ def decode(groups, scores, k):
     return np.argsort(-label_scores)[:k]
 
 
-# =========================================================
-# EVALUATION
-# =========================================================
 
 def evaluate(models, X, Y, groups, k=4):
 
@@ -353,10 +325,6 @@ def decode(groups, scores, k, n_labels):
     label_scores = groups_to_label_scores(groups, scores, n_labels)
     return np.argsort(-label_scores)[:k]
 
-
-# =========================================================
-# RUN
-# =========================================================
 
 def run():
 

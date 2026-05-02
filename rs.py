@@ -8,9 +8,7 @@ from sklearn.model_selection import train_test_split
 from scipy.sparse import issparse
 
 
-# =========================================================
-# DATA (MEDIAMILL)
-# =========================================================
+
 def load_bibtex():
     path = "datasets/bibtex"
 
@@ -74,9 +72,7 @@ def load_mediamill():
             *fix(X_test, Y_test))
 
 
-# =========================================================
-# YOUR STRUCTURED A MATRIX (ALPHABET / K-S STYLE)
-# =========================================================
+
 def build_A(n_labels, seed=0):
     rng = np.random.default_rng(seed)
 
@@ -105,9 +101,6 @@ def build_A(n_labels, seed=0):
     return A
 
 
-# =========================================================
-# GROUP MODELS
-# =========================================================
 class GroupClassifier(nn.Module):
     def __init__(self, d):
         super().__init__()
@@ -117,9 +110,6 @@ class GroupClassifier(nn.Module):
         return self.net(x).squeeze(-1)
 
 
-# =========================================================
-# TRAIN
-# =========================================================
 def train(X, Y, A, epochs=20, lr=1e-3):
 
     X = torch.tensor(X, dtype=torch.float32)
@@ -157,9 +147,6 @@ def train(X, Y, A, epochs=20, lr=1e-3):
     return models
 
 
-# =========================================================
-# PREDICT
-# =========================================================
 def predict(models, X):
     X = torch.tensor(X, dtype=torch.float32)
 
@@ -174,17 +161,10 @@ def predict(models, X):
     return np.stack(outs, axis=1)
 
 
-# =========================================================
-# DECODE
-# =========================================================
 def decode(A, group_scores, k):
     label_scores = A.T @ group_scores
     return np.argsort(-label_scores)[:k]
 
-
-# =========================================================
-# EVAL
-# =========================================================
 def evaluate(models, X, Y, A, k=1):
 
     probs = predict(models, X)
@@ -218,9 +198,7 @@ def evaluate(models, X, Y, A, k=1):
     }
 
 
-# =========================================================
-# RUN
-# =========================================================
+
 def run():
 
     Xtr, Ytr, Xva, Yva, Xte, Yte = load_bibtex()
