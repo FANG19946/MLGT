@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.sparse import csr_matrix
+from sklearn.decomposition import NMF
 from bitarray import bitarray
 import torch
 
@@ -217,3 +218,28 @@ def evaluation_metrics(W, dataset, A, k,e, device='cuda'):
     }
 
 
+def symNMF(Y_train, m, c_weight, seed=None):
+
+    C = (Y_train.T @ Y_train).astype(np.float32)
+    
+    model = NMF(n_components=m, init='random', random_state=seed, max_iter=200)
+    W = model.fit_transform(C) 
+    H = model.components_ 
+
+    A = np.zeros((m, Y_train.shape[1]), dtype=bool)
+    rng = np.random.default_rng(seed)
+
+    for j in range(H.shape[1]): 
+        h_j = H[:, j]
+        col_sum = np.sum(h_j)
+        
+        if col_sum > 0:
+            prob_vec = h_j / col_sum
+            prob_vec = prob_vec * c_weight
+            prob_vec = np.clip(prob_vec, 0, 1)
+        else:
+            prob_vec = np.full(m, c_weight / m)
+
+        A[:, j] = rng.random(m) < prob_vec
+        
+    return A
