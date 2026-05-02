@@ -53,3 +53,72 @@ def load_extreme_data(file_path):
         Y = csr_matrix((n_samples, n_labels))
 
     return X, Y
+
+def run_experiment(dataset_name='mediamill'):
+
+    X, Y = load_extreme_data('Mediamill_data.txt')
+
+    train_idx = np.loadtxt('mediamill_trSplit.txt', dtype=int).flatten() - 1
+    test_idx = np.loadtxt('mediamill_tstSplit.txt', dtype=int).flatten() - 1
+
+    X_train, Y_train = X[train_idx], Y[train_idx]
+    X_test, Y_test = X[test_idx], Y[test_idx]
+
+    e_ratio = 0.5
+    n_labels, _, k, e = dataset_params(Y_train, e_ratio)
+
+    C1 = 8
+    C2 = 2
+
+    e = int(C2 * k * np.log(n_labels))
+
+    n_tests = int(10 * k * np.log(n_labels + 1))
+
+    print(f"\nDataset stats:")
+    print(f"n_labels = {n_labels}, n_tests = {n_tests}, k = {k}, e = {e}")
+
+    methods = ['identity', 'bernoulli', 'expander', 'rs']
+
+    results = {}
+
+    for method in tqdm(methods, desc="Matrix methods"):
+
+        print(f"\n--- {method} ---")
+
+        A,n_tests,e = build_testing_matrix(
+            
+            n_labels=n_labels,
+            k=k,
+            method=method,
+            seed=42 , 
+            Y_train = Y_train
+        )
+
+        W = train_classifiers(
+            dataset=(X_train, Y_train),
+            A=A,
+            epochs=30,
+            lr=0.001,
+            device='cuda'  
+        )
+
+        metrics = evaluation_metrics(
+            W=W,
+            dataset=(X_test, Y_test),
+            A=A,
+            k=k,
+            e=e,
+            device='cuda'
+        )
+
+        results[method] = metrics
+        del W
+        torch.cuda.empty_cache()
+
+    print("\n===== FINAL RESULTS =====")
+    for method, metrics in results.items():
+        print(f"{method}: HL={metrics['hamming_loss']:.4f}, P@{k}={metrics['precision@k']:.4f}, n_labels={metrics['n_labels']}, n_tests={metrics['n_tests']}")
+
+
+if __name__ == "__main__":
+    run_experiment('mediamill')
