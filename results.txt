@@ -1,7 +1,6 @@
 Mediamill
 FINAL RESULTS 
-identity: HL=0.3275, P@4=0.0120, n_labels=101, n_tests=101
-bernoulli: HL=0.0436, P@4=0.1089, n_labels=101, n_tests=73
-expander: HL=0.0436, P@4=0.1310, n_labels=101, n_tests=147
-expander: HL=0.0436, P@4=0.0617, n_labels=101, n_tests=73
-rs: HL=0.0436, P@4=0.0457, n_labels=101, n_tests=32
+identity: HL=0.6000, P@4=0.0060, n_labels=101, n_tests=101
+bernoulli: HL=0.1782, P@4=0.0426, n_labels=101, n_tests=73
+expander: HL=0.0560, P@4=0.1158, n_labels=101, n_tests=73
+rs: HL=0.0436, P@4=0.0430, n_labels=101, n_tests=32

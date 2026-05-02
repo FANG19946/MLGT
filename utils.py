@@ -150,11 +150,20 @@ def train_classifiers(dataset, A, epochs, lr=0.001, device='cuda'):
         label_mask = A[i]  
         Y_test[:, i] = (label_matrix[:, label_mask].sum(dim=1) > 0)
 
+    Y_test = Y_test.float()
     
     W = torch.randn(n_tests, d, device=device, requires_grad=True)
     optimizer = torch.optim.Adam([W], lr=lr)
-    loss_fn = torch.nn.BCEWithLogitsLoss()
+    
+    pos = Y_test.sum(dim=0)
+    neg = Y_test.shape[0] - pos
 
+    pos_weight = neg / (pos + 1e-6)
+    pos_weight = torch.clamp(pos_weight, min=1.0, max=10.0).to(device)
+
+    pos_weight = pos_weight.to(device)
+    loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+    
     for _ in range(epochs):
 
         logits = feature_matrix @ W.T   # (n_samples, n_tests)
@@ -167,7 +176,7 @@ def train_classifiers(dataset, A, epochs, lr=0.001, device='cuda'):
 
     return W.detach()
 
-def evaluation_metrics(W, dataset, A, k,e, device='cuda'):
+def evaluation_metrics(W, dataset, A, k,e,threshold=0.1, device='cuda'):
     feature_matrix, label_matrix = dataset
     if hasattr(feature_matrix, "toarray"):
         feature_matrix = feature_matrix.toarray()
@@ -187,7 +196,7 @@ def evaluation_metrics(W, dataset, A, k,e, device='cuda'):
     logits = feature_matrix @ W.T
     result = torch.sigmoid(logits)
     probs = result.detach().cpu().numpy()
-    result = (result > 0.5)
+    result = (result > threshold)
 
     result=result.cpu().numpy().astype(bool)
     A = A.cpu().numpy().astype(bool)
@@ -201,9 +210,25 @@ def evaluation_metrics(W, dataset, A, k,e, device='cuda'):
         for i in range(n_samples):
             full_result[i] = decoder(A, result[i], e)
 
+
+
     true_result = label_matrix
     # Hamming loss
     hamming_loss = np.mean(true_result != full_result)
+
+    print("\n--- Decoder Debug ---")
+    # print("Avg predicted labels per sample:", full_result.sum(axis=1).mean())
+    avg_pred_label_per_sample = full_result.sum(axis=1).mean()
+    print("Min predicted labels:", full_result.sum(axis=1).min())
+    print("Max predicted labels:", full_result.sum(axis=1).max())
+
+    # print("Avg true labels per sample:", true_result.sum(axis=1).mean())
+
+    # Compare one example
+    idx = 0
+    print("\nExample sample:")
+    print("Predicted labels:", np.where(full_result[idx] == 1)[0][:20])
+    print("True labels:", np.where(true_result[idx] == 1)[0])
 
 
     precision_scores = []
@@ -234,7 +259,8 @@ def evaluation_metrics(W, dataset, A, k,e, device='cuda'):
     "hamming_loss": hamming_loss,
     "precision@k": precision_at_k,
     "n_labels": n_labels,
-    "n_tests": n_tests
+    "n_tests": n_tests,
+    "avg_pred": avg_pred_label_per_sample
     }
 
 

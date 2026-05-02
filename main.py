@@ -46,27 +46,17 @@ def load_arff_dataset(train_url, test_url, name):
 from skmultilearn.dataset import load_from_arff
 import os
 
+from sklearn.model_selection import train_test_split
+import os
+
 def load_data(dataset_name="mediamill"):
 
     path = os.path.join("datasets", dataset_name)
 
-    print("DEBUG PATH:", path)
-
     train_path = os.path.join(path, f"{dataset_name}-train.arff")
     test_path = os.path.join(path, f"{dataset_name}-test.arff")
 
-    print("TRAIN PATH:", train_path)
-    print("TEST PATH:", test_path)
-
-    if not os.path.exists(train_path):
-        raise FileNotFoundError(train_path)
-
-    if not os.path.exists(test_path):
-        raise FileNotFoundError(test_path)
-
-    from skmultilearn.dataset import load_from_arff
-
-    X_train, Y_train = load_from_arff(
+    X_train_full, Y_train_full = load_from_arff(
         train_path,
         label_count=101,
         label_location="end",
@@ -80,16 +70,25 @@ def load_data(dataset_name="mediamill"):
         load_sparse=False
     )
 
-    return (X_train, Y_train), (X_test, Y_test)
+    # split train → train + val
+    X_train, X_val, Y_train, Y_val = train_test_split(
+        X_train_full,
+        Y_train_full,
+        test_size=0.2,
+        random_state=42
+    )
+
+    return (X_train, Y_train), (X_val, Y_val), (X_test, Y_test)
 # ----------------------------
 # MAIN EXPERIMENT
 # ----------------------------
 def run_experiment(dataset_name='mediamill'):
 
     print(f"\nLoading dataset: {dataset_name}")
-    train_data, test_data = load_data(dataset_name)
+    train_data, val_data, test_data = load_data(dataset_name)
 
     X_train, Y_train = train_data
+    X_val, Y_val = val_data
     X_test, Y_test = test_data
 
     # ----------------------------
@@ -114,13 +113,14 @@ def run_experiment(dataset_name='mediamill'):
     # methods
     # ----------------------------
     methods = ['identity', 'bernoulli', 'expander', 'rs']
+    threshold=[0.9,  0.015,  0.05,  0.2]
 
     results = {}
 
     # ----------------------------
     # loop
     # ----------------------------
-    for method in tqdm(methods, desc="Matrix methods"):
+    for i,method in enumerate(methods):
 
         print(f"\n--- {method} ---")
 
@@ -140,12 +140,23 @@ def run_experiment(dataset_name='mediamill'):
             device='cuda'  # change if needed
         )
 
+        # metrics = evaluation_metrics(
+        #     W=W,
+        #     dataset=(X_val, Y_val),
+        #     A=A,
+        #     k=k,
+        #     e=e,
+        #     threshold=threshold[i],
+        #     device='cuda'
+        # )
+
         metrics = evaluation_metrics(
             W=W,
             dataset=(X_test, Y_test),
             A=A,
             k=k,
             e=e,
+            threshold=threshold[i],
             device='cuda'
         )
 
@@ -158,7 +169,7 @@ def run_experiment(dataset_name='mediamill'):
     # ----------------------------
     print("\n===== FINAL RESULTS =====")
     for method, metrics in results.items():
-        print(f"{method}: HL={metrics['hamming_loss']:.4f}, P@{k}={metrics['precision@k']:.4f}, n_labels={metrics['n_labels']}, n_tests={metrics['n_tests']}")
+        print(f"{method}: HL={metrics['hamming_loss']:.4f}, P@{k}={metrics['precision@k']:.4f}, n_labels={metrics['n_labels']}, n_tests={metrics['n_tests']}, Avg predicted labels per sample={metrics['avg_pred']}")
 
 
 # ----------------------------
