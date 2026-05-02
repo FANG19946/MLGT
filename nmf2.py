@@ -9,6 +9,103 @@ from scipy.sparse import issparse
 # =========================================================
 # DATA
 # =========================================================
+from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.model_selection import train_test_split
+import numpy as np
+def parse_libsvm_multilabel(path, max_feat=5000):
+    X_list = []
+    Y_list = []
+
+    with open(path, "r", encoding="utf-8", errors="ignore") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+
+            parts = line.split()
+
+            # -------------------------
+            # LABEL PARSING (FIRST TOKEN)
+            # -------------------------
+            raw_labels = parts[0].split(",")
+
+            labels = []
+            for x in raw_labels:
+                # safety: skip corrupted tokens like "0:0.08"
+                if ":" in x:
+                    continue
+                try:
+                    labels.append(int(x))
+                except:
+                    continue
+
+            Y_list.append(labels)
+
+            # -------------------------
+            # FEATURE PARSING
+            # -------------------------
+            x = np.zeros(max_feat, dtype=np.float32)
+
+            for item in parts[1:]:
+                if ":" not in item:
+                    continue
+                try:
+                    idx, val = item.split(":")
+                    idx = int(idx)
+                    if idx < max_feat:
+                        x[idx] = float(val)
+                except:
+                    continue
+
+            X_list.append(x)
+
+    return np.array(X_list, dtype=np.float32), Y_list
+
+def load_eurlex():
+
+    train_path = "datasets/eurlex/eurlex_train.txt"
+    test_path  = "datasets/eurlex/eurlex_test.txt"
+
+    print("\n[EURLEX LOADING...]")
+
+    X_train, Y_train_list = parse_libsvm_multilabel(train_path)
+    X_test,  Y_test_list  = parse_libsvm_multilabel(test_path)
+
+    mlb = MultiLabelBinarizer()
+    mlb.fit(Y_train_list + Y_test_list)
+
+    Y_train = mlb.transform(Y_train_list)
+    Y_test  = mlb.transform(Y_test_list)
+
+    X_train, X_val, Y_train, Y_val = train_test_split(
+        X_train, Y_train,
+        test_size=0.2,
+        random_state=42
+    )
+
+    def fix(X, Y):
+        X = X.toarray() if hasattr(X, "toarray") else X
+        Y = Y.toarray() if hasattr(Y, "toarray") else Y
+        return np.asarray(X, np.float32), np.asarray(Y, np.float32)
+
+    Xtr, Ytr = fix(X_train, Y_train)
+    Xva, Yva = fix(X_val, Y_val)
+    Xte, Yte = fix(X_test, Y_test)
+
+    print("\n[EURLEX FIXED LOADER]")
+    print("X_train:", Xtr.shape)
+    print("X_val:", Xva.shape)
+    print("X_test:", Xte.shape)
+    print("Y_train:", Ytr.shape)
+    print("Y_val:", Yva.shape)
+    print("Y_test:", Yte.shape)
+
+    print("n_labels:", Ytr.shape[1])
+    print("avg labels/sample:", Ytr.sum(axis=1).mean())
+
+    return Xtr, Ytr, Xte, Yte
+
+
 def load_bibtex():
     path = "datasets/bibtex"
 
@@ -263,19 +360,19 @@ def decode(groups, scores, k, n_labels):
 
 def run():
 
-    Xtr, Ytr, Xte, Yte = load_bibtex()
+    Xtr, Ytr, Xte, Yte = load_eurlex()
 
     print("labels:", Ytr.shape[1])
 
     S = build_S(Ytr)
 
-    H = symnmf(S, r=50, steps=200)
+    H = symnmf(S, r=82, steps=200)
 
     groups = build_groups(H)
 
     models = train_group_models(Xtr, Ytr, groups)
 
-    metrics = evaluate(models, Xte, Yte, groups, k=4)
+    metrics = evaluate(models, Xte, Yte, groups, k=5)
 
     print("\n===== RESULTS =====")
     print("\n===== RESULTS =====")

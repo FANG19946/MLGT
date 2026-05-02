@@ -3,6 +3,15 @@ FINAL RESULTS
 bernoulli {'hamming_loss': 0.06768078852178233, 'precision@k': 0.20488159702578193, 'n_tests': 46}
 expander {'hamming_loss': 0.05163710578894346, 'precision@k': 0.41628950133354886, 'n_tests': 46}
 identity {'hamming_loss': 0.05515773042380899, 'precision@k': 0.3698981653600582, 'n_tests': 101}
+rs:labels: 101
+n_tests: 32
+
+labels: 101
+
+training...
+
+EVAL
+{'hamming_loss': 0.05769086278304151, 'precision@k': 0.33651903337913197}
 SymNMF: hamming_loss: 0.058
 precision@k: 0.326
 n_labels: 101
@@ -27,3 +36,35 @@ n_tests: 50
 
 
 Eurlex
+===== FINAL SUMMARY =====
+bernoulli {'hamming_loss': 0.0026025177482079335, 'precision@k': 0.0006572029442691904, 'n_tests': 82}
+expander {'hamming_loss': 0.0021063705171804246, 'precision@k': 0.23179547844374343, 'n_tests': 82}
+identity {'hamming_loss': 0.001968537101929734, 'precision@k': 0.2801656151419558, 'n_tests': 3957}
+
+
+
+
+
+Mediamill n_labels:101
+
+bernoulli: HL: 0.067     P@1:0.790       P@3:0.27    P@5:0.186 n_tests:46
+Expander: HL: 0.052     P@1: 0.792      P@3:0.48    P@5:0.0.35 n_tests:46
+rs: HL: 0.063   P@1:0.007    P@3:0.224     P@5 0.29    n_tests:32
+SymNMF HL:0.045     P@1:0.66    P@3:0.482   P@5:0.298 n_tests:46
+
+
+Bibtex n_labels:159
+
+bernoulli: HL: 0.027     P@1:0.011       P@3:0.014    P@5:0.017 n_tests:50
+Expander: HL: 0.022     P@1: 0.361      P@3:0.15    P@5: 0.107 n_tests:50
+Identity: HL: 0.024   P@1:0.246    P@3:0.1     P@5 0.071    n_tests:50
+rs: HL:0.018    P@1:0.244   P@3:0.114   P@5:0.074
+SymNMF HL:0.02     P@1:0.163    P@3:0.093   P@5:0.086 n_tests:50
+
+
+Eurlex n_labels:3957
+bernoulli: HL: 0.002     P@1:0.001       P@3:0.001    P@5:0.001     n_tests:82
+Expander: HL: 0.002     P@1:0.483       P@3:0.27    P@5:0.196  n_tests:82
+Identity: HL: 0.001   P@1:    P@3:     P@5     n_tests:50
+rs: HL:0.018    P@1:0.244   P@3:0.114   P@5:0.074
+SymNMF HL:0.02     P@1:0.033    P@3:0.034   P@5:0.034 n_tests:82

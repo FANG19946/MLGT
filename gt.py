@@ -25,23 +25,197 @@ from sklearn.model_selection import train_test_split
 from skmultilearn.dataset import load_from_arff
 
 
-from mldr.datasets import get_mldr
+import arff
+import numpy as np
+from sklearn.model_selection import train_test_split
+import numpy as np
+from sklearn.model_selection import train_test_split
 
-def load_wiki10():
-    data = get_mldr("Wiki10-31K")
+import numpy as np
+from sklearn.model_selection import train_test_split
 
-    X = data["data"]
-    Y = data["target"]
+import numpy as np
+from sklearn.model_selection import train_test_split
 
-    from sklearn.model_selection import train_test_split
 
-    X_train, X_test, Y_train, Y_test = train_test_split(
-        X, Y, test_size=0.2, random_state=42
+import numpy as np
+from sklearn.model_selection import train_test_split
+
+
+import numpy as np
+from sklearn.model_selection import train_test_split
+import numpy as np
+
+
+import numpy as np
+from sklearn.preprocessing import MultiLabelBinarizer
+import numpy as np
+from sklearn.preprocessing import MultiLabelBinarizer
+
+# =========================================================
+# PARSER
+# =========================================================
+def parse_libsvm_multilabel(path, max_feat=5000):
+    X_list = []
+    Y_list = []
+
+    with open(path, "r", encoding="utf-8", errors="ignore") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+
+            parts = line.split()
+
+            # -------------------------
+            # LABEL PARSING (FIRST TOKEN)
+            # -------------------------
+            raw_labels = parts[0].split(",")
+
+            labels = []
+            for x in raw_labels:
+                # safety: skip corrupted tokens like "0:0.08"
+                if ":" in x:
+                    continue
+                try:
+                    labels.append(int(x))
+                except:
+                    continue
+
+            Y_list.append(labels)
+
+            # -------------------------
+            # FEATURE PARSING
+            # -------------------------
+            x = np.zeros(max_feat, dtype=np.float32)
+
+            for item in parts[1:]:
+                if ":" not in item:
+                    continue
+                try:
+                    idx, val = item.split(":")
+                    idx = int(idx)
+                    if idx < max_feat:
+                        x[idx] = float(val)
+                except:
+                    continue
+
+            X_list.append(x)
+
+    return np.array(X_list, dtype=np.float32), Y_list
+
+
+# =========================================================
+# MAIN LOADER
+# =========================================================
+from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.model_selection import train_test_split
+import numpy as np
+
+def load_eurlex():
+
+    train_path = "datasets/eurlex/eurlex_train.txt"
+    test_path  = "datasets/eurlex/eurlex_test.txt"
+
+    print("\n[EURLEX LOADING...]")
+
+    X_train, Y_train_list = parse_libsvm_multilabel(train_path)
+    X_test,  Y_test_list  = parse_libsvm_multilabel(test_path)
+
+    # -------------------------
+    # MULTI-LABEL ENCODING
+    # -------------------------
+    mlb = MultiLabelBinarizer()
+
+    # IMPORTANT FIX: avoid "unknown classes" warning
+    mlb.fit(Y_train_list + Y_test_list)
+
+    Y_train = mlb.transform(Y_train_list)
+    Y_test  = mlb.transform(Y_test_list)
+
+    # -------------------------
+    # CREATE VALIDATION SPLIT
+    # -------------------------
+    X_train, X_val, Y_train, Y_val = train_test_split(
+        X_train, Y_train,
+        test_size=0.2,
+        random_state=42
     )
 
-    print("[Wiki10] labels:", Y.shape[1])
+    print("\n[EURLEX FIXED LOADER]")
+    print("X_train:", X_train.shape)
+    print("X_val:", X_val.shape)
+    print("X_test:", X_test.shape)
 
-    return (X_train, Y_train), (None, None), (X_test, Y_test)
+    print("Y_train:", Y_train.shape)
+    print("Y_val:", Y_val.shape)
+    print("Y_test:", Y_test.shape)
+
+    print("n_labels:", Y_train.shape[1])
+    print("avg labels/sample:", Y_train.sum(axis=1).mean())
+
+    return (X_train, Y_train), (X_val, Y_val), (X_test, Y_test)
+
+def load_wiki10(path="datasets/Wiki10-31K.arff", n_labels=101):
+
+    X, Y = [], []
+    data = False
+
+    with open(path, "r", encoding="utf-8", errors="ignore") as f:
+        for line in f:
+
+            line = line.strip()
+
+            if line.lower() == "@data":
+                data = True
+                continue
+
+            if not data or len(line) == 0:
+                continue
+
+            try:
+                parts = line.split("{")
+
+                if len(parts) < 2:
+                    continue
+
+                feat_str = parts[1].split("}")[0]
+                label_str = parts[-1]
+
+                # ---- features ----
+                feats = np.fromstring(feat_str.replace(",", " "), sep=" ")
+                if len(feats) == 0:
+                    continue
+
+                # ---- labels ----
+                y = np.zeros(n_labels, dtype=np.int32)
+
+                tokens = label_str.replace("{","").replace("}","").replace(","," ").split()
+
+                for t in tokens:
+                    if t.isdigit():
+                        idx = int(t)
+                        if idx < n_labels:
+                            y[idx] = 1
+
+                X.append(feats)
+                Y.append(y)
+
+            except:
+                continue
+
+    X = np.array(X, dtype=np.float32)
+    Y = np.array(Y, dtype=np.int32)
+
+    print("\n[Wiki10 FINAL LOADER]")
+    print("X shape:", X.shape)
+    print("Y shape:", Y.shape)
+    print("avg labels/sample:", Y.sum(axis=1).mean())
+
+    return X, Y
+
+
+
 
 
 def load_bibtex():
@@ -287,7 +461,7 @@ def evaluate(models, X, Y, A, k_eval=4, k_decode=None, device="cpu"):
 
 def run():
 
-    (Xtr, Ytr), (Xva, Yva), (Xte, Yte) = load_wiki10()
+    (Xtr, Ytr), (Xva, Yva), (Xte, Yte) = load_eurlex()
 
     n_labels = Ytr.shape[1]
     m = int(10 * np.log(n_labels + 1))
@@ -302,7 +476,7 @@ def run():
     constructions = {
         "bernoulli": lambda: bernoulli_matrix(n_labels, m, k_target),
         "expander": lambda: expander_matrix(n_labels, m),
-        "identity": lambda: identity_matrix(n_labels)
+        # "identity": lambda: identity_matrix(n_labels)
     }
 
     results = {}
@@ -315,7 +489,7 @@ def run():
 
         models = train_models(Xtr, Ytr, A, epochs=20)
 
-        metrics = evaluate(models, Xte, Yte, A, k_eval=4)
+        metrics = evaluate(models, Xte, Yte, A, k_eval=5)
 
         results[name] = metrics
 
