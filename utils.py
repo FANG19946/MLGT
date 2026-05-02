@@ -67,6 +67,10 @@ def build_testing_matrix(
                     A[i, j] = True
                     load[i] += 1
 
+        case 'identity':
+            n_tests = n_labels
+            A = np.eye(n_labels, dtype=bool)
+
            
             
 
@@ -111,10 +115,10 @@ def dataset_params(trainset, e_ratio):
     trainset = np.array(trainset,dtype=bool)
     n_tests, n_labels = trainset.shape
 
-    label_sparsity = trainset.sum(axis=1)
+    sample_sparsity = trainset.sum(axis=1)
     label_frequency = trainset.sum(axis=0)
     mean_frequency = np.mean(label_frequency)
-    k=int(np.median(label_sparsity))
+    k=int(np.median(sample_sparsity))
     e=max(1, int(e_ratio * mean_frequency))
 
     return n_labels,n_tests,k,e
@@ -133,7 +137,7 @@ def train_classifiers(dataset, A, epochs, lr=0.001, device='cuda'):
 
     for i in range(n_tests):
         label_mask = A[i]  
-        Y_test[:, i] = torch.any(label_matrix[:, label_mask], dim=1)
+        Y_test[:, i] = (label_matrix[:, label_mask].sum(dim=1) > 0)
 
     
     W = torch.randn(n_tests, d, device=device, requires_grad=True)
@@ -172,7 +176,9 @@ def evaluation_metrics(W, dataset, A, k,e, device='cuda'):
     A = A.cpu().numpy().astype(bool)
     label_matrix = label_matrix.cpu().numpy()
 
-    full_result = decoder(A,result,e)
+    full_result = np.zeros((n_samples, n_labels), dtype=int)
+    for i in range(n_samples):
+        full_result[i] = decoder(A, result[i], e)
 
     true_result = label_matrix
     # Hamming loss
@@ -199,6 +205,15 @@ def evaluation_metrics(W, dataset, A, k,e, device='cuda'):
 
         precision_scores.append(hits / k)
 
-    precision_at_k = np.mean(precision_scores)
+    if(len(precision_scores)>1):
+        precision_at_k = np.mean(precision_scores)
+    else:
+        precision_at_k = 0.0
+
+
+    return {
+    "hamming_loss": hamming_loss,
+    "precision@k": precision_at_k
+    }
 
 
